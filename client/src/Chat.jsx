@@ -38,6 +38,7 @@ export default function Chat(){
         })
         setOnlinePeople(people);
     }
+
     // the function to handleMessage to people
     function handleMessage(ev){
         const messageData = JSON.parse(ev.data)
@@ -45,9 +46,12 @@ export default function Chat(){
         if ('online' in messageData){
             showOnlinePeople(messageData.online)
         }else if ('text' in messageData){
-            setMessages(prev => ([...prev, {...messageData}]));
+            if(messageData.sender === selectedUserId){
+                setMessages(prev => ([...prev, {...messageData}]));
+            }
         }  
     }
+
     function logout(){
         axios.post('/logout').then(()=>{
             setWs(null);
@@ -57,20 +61,40 @@ export default function Chat(){
     }
 
     // the function to send a message
-    function sendMessage(ev){
-        ev.preventDefault();
+    function sendMessage(ev, file = null) {
+        if (ev) ev.preventDefault();
         ws.send(JSON.stringify({
-                recipient: selectedUserId,
-                text: newMessageText,
+          recipient: selectedUserId,
+          text: newMessageText,
+          file,
         }));
-        setNewMessageText('');
-        setMessages(prev => ([...prev,{
-            text: newMessageText, 
+        if (file) {
+          axios.get('/messages/'+selectedUserId).then(res => {
+            setMessages(res.data);
+          });
+        } else {
+          setNewMessageText('');
+          setMessages(prev => ([...prev,{
+            text: newMessageText,
             sender: id,
             recipient: selectedUserId,
-            _id: Date.now(), 
-        }]));
-    };
+            _id: Date.now(),
+          }]));
+        }
+      }
+      function sendFile(ev) {
+        const reader = new FileReader();
+        reader.readAsDataURL(ev.target.files[0]);
+        reader.onload = () => {
+          sendMessage(null, {
+            name: ev.target.files[0].name,
+            data: reader.result,
+          });
+        };
+      }
+
+
+
 
     useEffect(()=> {
         const div = divUnderMessages.current;
@@ -90,17 +114,17 @@ export default function Chat(){
 
 
     useEffect(() => {
-        axios.get('/people').then(res => {
-            const offlinePeopleArr = res.data
-            .filter( p => p._id !== id)
-            .filter( p => Object.keys(onlinePeople).includes(p._id))
-            const offlinePeople = {};
-            offlinePeopleArr.forEach(p => {
-                offlinePeople[p._id] = p;
-            })
-           setOfflinePeople(offlinePeople);
-        });
-    },[onlinePeople]);
+    axios.get('/people').then(res => {
+      const offlinePeopleArr = res.data
+        .filter(p => p._id !== id)
+        .filter(p => !Object.keys(onlinePeople).includes(p._id));
+      const offlinePeople = {};
+      offlinePeopleArr.forEach(p => {
+        offlinePeople[p._id] = p;
+      });
+      setOfflinePeople(offlinePeople);
+    });
+  }, [onlinePeople]);
 
     const onlinePeopleExclOurUser = {...onlinePeople};
     delete onlinePeopleExclOurUser[id];
@@ -135,8 +159,8 @@ export default function Chat(){
                   ></Contact>
               ))}
                 </div>
-                <div className="p-2 text-center flex items-center justify-center">
-                  <span className="mr-2 text-sm text-gray-600 flex items-center"> 
+                <div className="gap-1 p-2 text-center flex items-center justify-center">
+                  <span className="font-bold gap-1 mr-2 text-sm text-gray-300 flex items-center"> 
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                   <path d="M4.5 6.375a4.125 4.125 0 118.25 0 4.125 4.125 0 01-8.25 0zM14.25 8.625a3.375 3.375 0 116.75 0 3.375 3.375 0 01-6.75 0zM1.5 19.125a7.125 7.125 0 0114.25 0v.003l-.001.119a.75.75 0 01-.363.63 13.067 13.067 0 01-6.761 1.873c-2.472 0-4.786-.684-6.76-1.873a.75.75 0 01-.364-.63l-.001-.122zM17.25 19.128l-.001.144a2.25 2.25 0 01-.233.96 10.088 10.088 0 005.06-1.01.75.75 0 00.42-.643 4.875 4.875 0 00-6.957-4.611 8.586 8.586 0 011.71 5.157v.003z" />
                   </svg>
@@ -163,6 +187,16 @@ export default function Chat(){
                                 <div key={message._id} className={(message.sender === id ? 'text-right' : 'text-left')}>
                                 <div className={"text-left inline-block p-2 m-2 rounded-md text-sm " +(message.sender == id ? 'bg-green-500 text-white' : 'bg-white text-gray-500')}>
                                     {message.text}
+                                    {message.file && (
+                                        <div className="">    
+                                            <a target="_blank" className=" flex items-center gap-1 border-b" href={axios.defaults.baseURL + '/uploads/' + message.file}>
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
+                                            <path fillRule="evenodd" d="M19.902 4.098a3.75 3.75 0 00-5.304 0l-4.5 4.5a3.75 3.75 0 001.035 6.037.75.75 0 01-.646 1.353 5.25 5.25 0 01-1.449-8.45l4.5-4.5a5.25 5.25 0 117.424 7.424l-1.757 1.757a.75.75 0 11-1.06-1.06l1.757-1.757a3.75 3.75 0 000-5.304zm-7.389 4.267a.75.75 0 011-.353 5.25 5.25 0 011.449 8.45l-4.5 4.5a5.25 5.25 0 11-7.424-7.424l1.757-1.757a.75.75 0 111.06 1.06l-1.757 1.757a3.75 3.75 0 105.304 5.304l4.5-4.5a3.75 3.75 0 00-1.035-6.037.75.75 0 01-.354-1z" clipRule="evenodd" />
+                                            </svg>
+                                            {message.file}
+                                            </a>
+                                        </div>
+                                    )}
                                 </div>
                                 </div>
                             ))}
@@ -180,12 +214,13 @@ export default function Chat(){
                      onChange={ev => setNewMessageText(ev.target.value)}
                      placeholder='Type your message here' 
                      className="bg-white flex-grow border rounded-sm p-2" />
-                     <button type='button' className=" bg-green-100 p-2 text-green-600 rounded-sm border border-green-200">
+                     <label className=" bg-green-100 p-2 text-green-600 cursor-pointer rounded-sm border border-green-200">
+                        <input type="file" className="hidden" onChange={sendFile}/>
                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
                     <path fillRule="evenodd" d="M19.902 4.098a3.75 3.75 0 00-5.304 0l-4.5 4.5a3.75 3.75 0 001.035 6.037.75.75 0 01-.646 1.353 5.25 5.25 0 01-1.449-8.45l4.5-4.5a5.25 5.25 0 117.424 7.424l-1.757 1.757a.75.75 0 11-1.06-1.06l1.757-1.757a3.75 3.75 0 000-5.304zm-7.389 4.267a.75.75 0 011-.353 5.25 5.25 0 011.449 8.45l-4.5 4.5a5.25 5.25 0 11-7.424-7.424l1.757-1.757a.75.75 0 111.06 1.06l-1.757 1.757a3.75 3.75 0 105.304 5.304l4.5-4.5a3.75 3.75 0 00-1.035-6.037.75.75 0 01-.354-1z" clipRule="evenodd" />
                      </svg>
 
-                     </button>
+                     </label>
                      <button type="submit" className="bg-green-600 p-2 text-white rounded-sm">
                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-6 h-6">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
