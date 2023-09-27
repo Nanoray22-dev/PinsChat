@@ -29,7 +29,7 @@ app.use(cookieParser());
 
 // CORS 
 app.use(cors({
-    origin : "http://localhost:5000",
+    origin : ["http://localhost:5000", "https://PinsChat.onrender.com"],
     credentials: true,
 }))
 
@@ -132,7 +132,7 @@ app.post('/logout', (req,res) => {
   });
 
 app.post('/register', async (req, res) => {
-  // Your registration logic here
+  // the logic registration 
   const {username,password} = req.body;
   try{
     const hashedPassword = bcrypt.hashSync(password, bcryptSalt)
