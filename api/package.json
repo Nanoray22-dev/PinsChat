@@ -1,0 +1,29 @@
+{
+  "name": "api",
+  "version": "1.0.0",
+  "description": "Backend",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nanoray22-dev/api.git"
+  },
+  "author": "Raysell",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Nanoray22-dev/api/issues"
+  },
+  "homepage": "https://github.com/Nanoray22-dev/api#readme",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.6",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.4.1",
+    "ws": "^8.17.0"
+  }
+}
